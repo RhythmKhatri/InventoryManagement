@@ -14,17 +14,27 @@ import {
   IconButton
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CheckIcon from '@mui/icons-material/Check';
+import EditIcon from '@mui/icons-material/Edit';
 
 const PEInput = () => {
   const [data, setData] = useState([]);
   const [newRow, setNewRow] = useState({
     device: '',
-    opn: '',
     version: '',
     qty: 0,
     qtyAvailable: 0,
     peComment: ''
   });
+  const [editRowId, setEditRowId] = useState(null);
+  const [editRowData, setEditRowData] = useState({
+    device: '',
+    version: '',
+    qty: 0,
+    qtyAvailable: 0,
+    peComment: ''
+  });
+
   let baseURL = process.env.PRODUCTION_BACKEND_URL || process.env.REACT_APP_BACKEND_PORT;
 
   useEffect(() => {
@@ -32,14 +42,11 @@ const PEInput = () => {
   }, []);
 
   const fetchData = async () => {
-    // Replace with your API endpoint to fetch data
     try {
       const url = baseURL + 'getPEInputs';
-      console.log('url', url)
       const response = await fetch(url);
       const jsonData = await response.json();
-      console.log('jsonData', jsonData);
-      if (jsonData.Success == true) {
+      if (jsonData.Success === true) {
         setData(jsonData.pe_inputs);
       }
     } catch (error) {
@@ -48,16 +55,22 @@ const PEInput = () => {
   };
 
   const addRow = async () => {
-    // Replace with your API endpoint to add data
+    if(newRow.device== '' ||
+    newRow.qty== '' ||
+    newRow.qtyAvailable== 0 
+    )
+    {
+      alert("Device, Quantity and Quantity Available fields can't be empty")
+      return;
+    }
     try {
-      console.log('newRow', newRow);
       let modifiedBody = {
         device_opn: newRow.device,
         version: newRow.version,
         quantity: newRow.qty,
         quantity_available: newRow.qtyAvailable,
         pe_comment: newRow.peComment
-      }
+      };
       const url = baseURL + 'addPEInput';
       const response = await fetch(url, {
         method: 'POST',
@@ -67,13 +80,9 @@ const PEInput = () => {
         body: JSON.stringify(modifiedBody)
       });
       const jsonData = await response.json();
-      console.log('Added row:', jsonData);
-
-      // Update state to refresh table
       fetchData();
       setNewRow({
         device: '',
-        opn: '',
         version: '',
         qty: 0,
         qtyAvailable: 0,
@@ -86,14 +95,16 @@ const PEInput = () => {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+    console.log('value', value)
     setNewRow({ ...newRow, [name]: value });
   };
 
+  const handleEditChange = (event) => {
+    const { name, value } = event.target;
+    setEditRowData({ ...editRowData, [name]: value });
+  };
+
   const deleteRow = async (id) => {
-    // Replace with your API endpoint to delete data
-    let modifiedBody = {
-        id : id,
-      }
     try {
       const url = baseURL + 'deletePEInput';
       await fetch(url, {
@@ -101,14 +112,47 @@ const PEInput = () => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(modifiedBody)
+        body: JSON.stringify({ id })
       });
-      console.log('Deleted row:', id);
-
-      // Update state to refresh table
       fetchData();
     } catch (error) {
       console.error('Error deleting row:', error);
+    }
+  };
+
+  const editRow = (row) => {
+    setEditRowId(row._id);
+    setEditRowData({
+      device: row.device_opn,
+      version: row.version,
+      qty: row.quantity,
+      qtyAvailable: row.quantity_available,
+      peComment: row.pe_comment
+    });
+  };
+
+  const saveRow = async (id) => {
+    try {
+      const url = baseURL + 'updatePEInput';
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id,
+          device_opn: editRowData.device,
+          version: editRowData.version,
+          quantity: editRowData.qty,
+          quantity_available: editRowData.qtyAvailable,
+          pe_comment: editRowData.peComment
+        })
+      });
+      const jsonData = await response.json();
+      fetchData();
+      setEditRowId(null);
+    } catch (error) {
+      console.error('Error saving row:', error);
     }
   };
 
@@ -124,22 +168,74 @@ const PEInput = () => {
                 <TableCell>Qty</TableCell>
                 <TableCell>Qty available</TableCell>
                 <TableCell>PE comment</TableCell>
-                <TableCell>Action</TableCell> {/* Add this column for the delete button */}
+                <TableCell>Action</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {data.length > 0 && data.map((row) => (
                 <TableRow key={row._id}>
-                  <TableCell>{row.device_opn}</TableCell>
-                  <TableCell>{row.version}</TableCell>
-                  <TableCell>{row.quantity}</TableCell>
-                  <TableCell>{row.quantity_available}</TableCell>
-                  <TableCell>{row.pe_comment}</TableCell>
-                  <TableCell>
-                    <IconButton onClick={() => deleteRow(row._id)}>
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
+                  {editRowId === row._id ? (
+                    <>
+                      <TableCell>
+                        <TextField
+                          name="device"
+                          value={editRowData.device}
+                          onChange={handleEditChange}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          name="version"
+                          value={editRowData.version}
+                          onChange={handleEditChange}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          type="number"
+                          name="qty"
+                          value={editRowData.qty}
+                          onChange={handleEditChange}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          type="number"
+                          name="qtyAvailable"
+                          value={editRowData.qtyAvailable}
+                          onChange={handleEditChange}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          name="peComment"
+                          value={editRowData.peComment}
+                          onChange={handleEditChange}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <IconButton onClick={() => saveRow(row._id)}>
+                          <CheckIcon />
+                        </IconButton>
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell>{row.device_opn}</TableCell>
+                      <TableCell>{row.version}</TableCell>
+                      <TableCell>{row.quantity}</TableCell>
+                      <TableCell>{row.quantity_available}</TableCell>
+                      <TableCell>{row.pe_comment}</TableCell>
+                      <TableCell>
+                        <IconButton onClick={() => editRow(row)}>
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton onClick={() => deleteRow(row._id)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
