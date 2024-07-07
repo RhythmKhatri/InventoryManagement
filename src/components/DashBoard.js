@@ -68,10 +68,10 @@ const Dashboard = () => {
       const quantityAvailable = row.quantity_available;
 
       let smartComment;
-      if (row.shipping_status === 'Yes') {
+      if (row.shipping_status === 'No') {
         smartComment = quantityAvailable - totalQuantityDemand;
       } else {
-        smartComment = 'Not Shipped';
+        smartComment = 'Shipped';
       }
 
       return {
@@ -111,10 +111,10 @@ const Dashboard = () => {
   };
 
   const getRowComponent = (row) => {
-    if (row.shipping_status === 'Yes') {
-      if (row.smart_comment > 0) {
+    if (row.shipping_status === 'No') {
+      if (row.smart_comment - row.quantity_demand >= 0) {
         return <PositiveRow key={row.id}>{getRowCells(row)}</PositiveRow>;
-      } else if (row.smart_comment < 0) {
+      } else {
         return <NegativeRow key={row.id}>{getRowCells(row)}</NegativeRow>;
       }
     }
